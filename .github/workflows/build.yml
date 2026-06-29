@@ -5,20 +5,39 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  release:
+    types: [created]
 
 jobs:
-  build:
+  # =========================
+  # JOB 1: BUILD GEODE CLI
+  # =========================
+  geode:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
+          # Desktop platforms
           - os: ubuntu-latest
-            platform: linux
-          - os: windows-latest
-            platform: win32
+            platform: Linux
+
           - os: macos-latest
-            platform: macos
+            platform: MacOS
+
+          - os: windows-latest
+            platform: Win64
+
+          # Mobile platforms
+          - os: ubuntu-latest
+            platform: Android64
+            android_abi: arm64-v8a
+
+          - os: ubuntu-latest
+            platform: Android32
+            android_abi: armeabi-v7a
+
+          - os: macos-latest
+            platform: iOS
 
     runs-on: ${{ matrix.os }}
 
@@ -33,18 +52,28 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake g++ git
+          sudo apt-get install -y ninja-build cmake g++ git ccache
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           brew update
-          brew install ninja cmake git
+          brew install ninja cmake git ccache
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          choco install ninja cmake git -y
+          choco install ninja cmake git ccache -y
+
+      # Android toolchain (simplified example)
+      - name: Install Android NDK
+        if: matrix.platform == 'Android64' || matrix.platform == 'Android32'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
+          unzip android-ndk-r26d-linux.zip
+          echo "$PWD/android-ndk-r26d" >> $GITHUB_PATH
 
       # -------------------------
       # BUILD GEODE CLI
@@ -52,11 +81,12 @@ jobs:
       - name: Clone Geode SDK
         run: git clone --depth 1 https://github.com/geode-sdk/geode.git
 
-      - name: Build Geode CLI (Linux/macOS)
+      - name: Build Geode CLI (non-Windows)
         if: matrix.os != 'windows-latest'
         working-directory: geode
         env:
           GEODE_TARGET_PLATFORM: ${{ matrix.platform }}
+          ANDROID_ABI: ${{ matrix.android_abi }}
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -69,28 +99,107 @@ jobs:
         shell: pwsh
         working-directory: geode
         env:
-          GEODE_TARGET_PLATFORM: win32
+          GEODE_TARGET_PLATFORM: Win64
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF -DGEODE_TARGET_PLATFORM=win32
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF -DGEODE_TARGET_PLATFORM=Win64
           cmake --build build --target geode
 
-      - name: Add Geode CLI to PATH
-        run: echo "$(pwd)/geode/build/bin" >> $GITHUB_PATH
+      - name: Compress Geode CLI
+        run: |
+          mkdir -p geode-artifacts
+          cp -r geode/build/bin geode-artifacts/
+          zip -r geode-${{ matrix.platform }}.zip geode-artifacts
 
-      # -------------------------
-      # BUILD YOUR PROJECT
-      # -------------------------
+      - name: Upload Geode CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: geode-${{ matrix.platform }}
+          path: geode-${{ matrix.platform }}.zip
+
+  # =========================
+  # JOB 2: BUILD YOUR PROJECT
+  # =========================
+  project:
+    needs: geode
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+
+          - os: macos-latest
+            platform: MacOS
+
+          - os: windows-latest
+            platform: Win64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake g++ git ccache
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install ninja cmake git ccache
+
+      - name: Install dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install ninja cmake git ccache -y
+
+      - name: Download Geode CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: geode-${{ matrix.platform }}
+
+      - name: Extract Geode CLI
+        run: |
+          unzip geode-${{ matrix.platform }}.zip
+          echo "$PWD/geode-artifacts/bin" >> $GITHUB_PATH
+
       - name: Configure project
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build project
         run: cmake --build build
 
-      # -------------------------
-      # ARTIFACTS
-      # -------------------------
-      - name: Upload build artifacts
+      - name: Compress project artifacts
+        run: |
+          zip -r project-${{ matrix.platform }}.zip build/
+
+      - name: Upload project artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }}
-          path: build/
+          name: project-${{ matrix.platform }}
+          path: project-${{ matrix.platform }}.zip
+
+  # =========================
+  # JOB 3: CREATE RELEASE
+  # =========================
+  release:
+    needs: project
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download all project artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
