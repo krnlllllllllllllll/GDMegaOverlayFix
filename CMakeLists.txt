@@ -6,6 +6,11 @@ project(GDMegaOverlayFix LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Ensure platform is provided
+if(NOT DEFINED GEODE_TARGET_PLATFORM)
+    message(FATAL_ERROR "GEODE_TARGET_PLATFORM must be set (Win64, MacOS, Linux, Android64, Android32, iOS)")
+endif()
+
 # Enable IDE folder grouping
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
