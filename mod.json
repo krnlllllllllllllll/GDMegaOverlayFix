@@ -1,29 +1,22 @@
 {
-	"geode": "2.0.0-beta.26",
-	"gd": {
-		"win": "2.204"
-	},
-	"version": "v2.11.1",
-	"id": "maxnu.gd_mega_overlay",
-	"name": "GD Mega Overlay",
-	"developers": ["maxnu", "SpaghettDev"],
-	"description": "Free, feature-rich, gui-integrated geometry dash mod menu",
-	"repository": "https://github.com/maxnut/GDMegaOverlay",
-	"resources": {
-		"files": [
-			"res/hacks/*.json",
-			"res/Style.style",
-			"res/Roboto-Regular.ttf",
-			"res/get_ffmpeg/*",
-			"res/default_windows.json",
-			"res/shadow.png"
-		]
-	},
-	"dependencies": [
-		{
-            "id": "geode.node-ids",
-            "version": ">=v1.9.1",
-            "importance": "required"
+    "geode": "5.7.1",
+    "id": "krn.gdmegaoverlayfix",
+    "name": "GDMegaOverlayFix",
+    "version": "1.0.0",
+    "developer": "krn",
+    "description": "Fixes overlay issues in Geometry Dash Mega Hack environments.",
+    "repository": "https://github.com/krnlllllllllllllll/GDMegaOverlayFix",
+
+    "entry": "src/main.cpp",
+
+    "resources": {
+        "folder": "res"
+    },
+
+    "dependencies": [
+        {
+            "id": "geode.loader",
+            "version": ">=3.0.0"
         }
-	]
+    ]
 }
