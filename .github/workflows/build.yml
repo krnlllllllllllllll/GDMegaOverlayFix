@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ geode ]
   pull_request:
   release:
     types: [ created ]
