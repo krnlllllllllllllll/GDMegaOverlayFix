@@ -1,10 +1,13 @@
+# Discord RPC for Geode 5.7.1
+
 include(FetchContent)
 
 FetchContent_Declare(
-    discord-rpc
+    discord_rpc
     GIT_REPOSITORY https://github.com/discord/discord-rpc.git
-    GIT_TAG        963aa9f3e5ce81a4682c6ca3d136cddda614db33
-    GIT_PROGRESS TRUE
+    GIT_TAG master
 )
-message("Fetching discord-rpc")
-FetchContent_MakeAvailable(discord-rpc)
+
+FetchContent_MakeAvailable(discord_rpc)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE discord-rpc)
