@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build g++ gcc
+          sudo apt install -y cmake ninja-build g++ gcc unzip curl
 
       - name: Install Geode SDK
         run: |
@@ -37,5 +37,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GDMegaOverlayFix
-          path: build/bin/*
+          name: build-output
+          path: build
