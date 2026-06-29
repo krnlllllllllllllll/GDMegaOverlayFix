@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ geode ]
+    branches: [ main ]
   pull_request:
   release:
     types: [ created ]
@@ -32,6 +32,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -59,24 +61,16 @@ jobs:
       - name: Clone Geode SDK
         run: git clone --depth 1 https://github.com/geode-sdk/geode.git
 
-      - name: Build Geode CLI (non-Windows)
-        if: matrix.os != 'windows-latest'
+      - name: Build Geode CLI
         working-directory: geode
         env:
           GEODE_TARGET_PLATFORM: ${{ matrix.platform }}
           ANDROID_ABI: ${{ matrix.android_abi }}
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --target geode
-
-      - name: Build Geode CLI (Windows)
-        if: matrix.os == 'windows-latest'
-        working-directory: geode
-        env:
-          GEODE_TARGET_PLATFORM: Win64
-        shell: pwsh
-        run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGEODE_TARGET_PLATFORM=${{ matrix.platform }} \
+            -DANDROID_ABI=${{ matrix.android_abi }}
           cmake --build build --target geode
 
       - name: Package Geode CLI
@@ -108,8 +102,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -139,7 +132,9 @@ jobs:
           echo "$PWD/geode-artifacts/bin" >> $GITHUB_PATH
 
       - name: Configure project
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DGEODE_TARGET_PLATFORM=${{ matrix.platform }}
 
       - name: Build project
         run: cmake --build build
