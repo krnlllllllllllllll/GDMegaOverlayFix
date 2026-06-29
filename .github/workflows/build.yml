@@ -16,7 +16,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux
           - os: windows-latest
-            platform: windows
+            platform: win32
           - os: macos-latest
             platform: macos
 
@@ -69,9 +69,9 @@ jobs:
         shell: pwsh
         working-directory: geode
         env:
-          GEODE_TARGET_PLATFORM: windows
+          GEODE_TARGET_PLATFORM: win32
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF -DGEODE_TARGET_PLATFORM=windows
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF -DGEODE_TARGET_PLATFORM=win32
           cmake --build build --target geode
 
       - name: Add Geode CLI to PATH
