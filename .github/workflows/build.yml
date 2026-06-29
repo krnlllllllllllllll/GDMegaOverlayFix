@@ -1,58 +1,42 @@
 name: Build
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
   release:
-    types: [created]
+    types: [ created ]
 
 jobs:
-  # =========================
-  # JOB 1: BUILD GEODE CLI
-  # =========================
   geode:
+    name: Build Geode CLI
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Desktop platforms
           - os: ubuntu-latest
             platform: Linux
-
           - os: macos-latest
             platform: MacOS
-
           - os: windows-latest
             platform: Win64
-
-          # Mobile platforms
           - os: ubuntu-latest
             platform: Android64
             android_abi: arm64-v8a
-
           - os: ubuntu-latest
             platform: Android32
             android_abi: armeabi-v7a
-
           - os: macos-latest
             platform: iOS
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # -------------------------
-      # PLATFORM-SPECIFIC SETUP
-      # -------------------------
       - name: Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake g++ git ccache
+          sudo apt-get install -y ninja-build cmake g++ git ccache unzip wget
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -65,19 +49,13 @@ jobs:
         run: |
           choco install ninja cmake git ccache -y
 
-      # Android toolchain (simplified example)
       - name: Install Android NDK
         if: matrix.platform == 'Android64' || matrix.platform == 'Android32'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip
           wget https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
           unzip android-ndk-r26d-linux.zip
           echo "$PWD/android-ndk-r26d" >> $GITHUB_PATH
 
-      # -------------------------
-      # BUILD GEODE CLI
-      # -------------------------
       - name: Clone Geode SDK
         run: git clone --depth 1 https://github.com/geode-sdk/geode.git
 
@@ -88,23 +66,20 @@ jobs:
           GEODE_TARGET_PLATFORM: ${{ matrix.platform }}
           ANDROID_ABI: ${{ matrix.android_abi }}
         run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DGEODE_BUILD_BINDINGS=OFF \
-            -DGEODE_TARGET_PLATFORM=${{ matrix.platform }}
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target geode
 
       - name: Build Geode CLI (Windows)
         if: matrix.os == 'windows-latest'
-        shell: pwsh
         working-directory: geode
         env:
           GEODE_TARGET_PLATFORM: Win64
+        shell: pwsh
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF -DGEODE_TARGET_PLATFORM=Win64
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF
           cmake --build build --target geode
 
-      - name: Compress Geode CLI
+      - name: Package Geode CLI
         run: |
           mkdir -p geode-artifacts
           cp -r geode/build/bin geode-artifacts/
@@ -116,10 +91,8 @@ jobs:
           name: geode-${{ matrix.platform }}
           path: geode-${{ matrix.platform }}.zip
 
-  # =========================
-  # JOB 2: BUILD YOUR PROJECT
-  # =========================
   project:
+    name: Build Project
     needs: geode
     strategy:
       fail-fast: false
@@ -127,10 +100,8 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: Linux
-
           - os: macos-latest
             platform: MacOS
-
           - os: windows-latest
             platform: Win64
 
@@ -144,7 +115,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake g++ git ccache
+          sudo apt-get install -y ninja-build cmake g++ git ccache unzip
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -173,9 +144,8 @@ jobs:
       - name: Build project
         run: cmake --build build
 
-      - name: Compress project artifacts
-        run: |
-          zip -r project-${{ matrix.platform }}.zip build/
+      - name: Package project artifacts
+        run: zip -r project-${{ matrix.platform }}.zip build/
 
       - name: Upload project artifacts
         uses: actions/upload-artifact@v4
@@ -183,10 +153,8 @@ jobs:
           name: project-${{ matrix.platform }}
           path: project-${{ matrix.platform }}.zip
 
-  # =========================
-  # JOB 3: CREATE RELEASE
-  # =========================
   release:
+    name: Create Release
     needs: project
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
@@ -197,9 +165,9 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create GitHub Release assets
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: artifacts/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
