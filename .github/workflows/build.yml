@@ -1,4 +1,4 @@
-name: Build
+name: Build Geode Mod
 
 on:
   push:
@@ -19,12 +19,6 @@ jobs:
           sudo apt update
           sudo apt install -y cmake ninja-build g++ gcc unzip curl
 
-      - name: Install Geode SDK
-        run: |
-          curl -L https://github.com/geode-sdk/geode/releases/download/v5.7.1/geode-sdk-linux.zip -o geode.zip
-          unzip geode.zip -d geode-sdk
-          echo "GEODE_SDK=$(pwd)/geode-sdk" >> $GITHUB_ENV
-
       - name: Install Geode CLI
         run: |
           curl -Ls https://geode-sdk.org/install.sh | bash
@@ -32,9 +26,7 @@ jobs:
 
       - name: Configure CMake
         run: |
-          cmake -B build -G Ninja \
-            -DGEODE_SDK=$GEODE_SDK \
-            -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release
@@ -45,5 +37,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mod
+          name: GDMegaOverlayFix
           path: build/*.geode
