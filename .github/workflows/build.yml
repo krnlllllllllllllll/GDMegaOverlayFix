@@ -1,44 +1,85 @@
 name: Build
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ geode ]
+    branches:
+      - main
   pull_request:
-    branches: [ geode ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      # -------------------------
+      # PLATFORM-SPECIFIC SETUP
+      # -------------------------
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build g++ gcc unzip curl git
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake g++ git
 
-      - name: Install Geode CLI
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
         run: |
-          git clone --depth 1 https://github.com/geode-sdk/geode.git
-          cd geode
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGEODE_BUILD_BINDINGS=OFF
+          brew update
+          brew install ninja cmake git
+
+      - name: Install dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install ninja cmake git -y
+
+      # -------------------------
+      # BUILD GEODE CLI
+      # -------------------------
+      - name: Clone Geode SDK
+        run: git clone --depth 1 https://github.com/geode-sdk/geode.git
+
+      - name: Build Geode CLI
+        working-directory: geode
+        env:
+          GEODE_TARGET_PLATFORM: ${{ matrix.platform }}
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGEODE_BUILD_BINDINGS=OFF \
+            -DGEODE_TARGET_PLATFORM=${{ matrix.platform }}
           cmake --build build --target geode
-          echo "$(pwd)/build/bin" >> $GITHUB_PATH
 
-      - name: Configure CMake
+      - name: Add Geode CLI to PATH
+        run: echo "$(pwd)/geode/build/bin" >> $GITHUB_PATH
+
+      # -------------------------
+      # BUILD YOUR PROJECT
+      # -------------------------
+      - name: Build your project
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
 
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Package mod
-        run: geode build --dir build
-
-      - name: Upload artifact
+      # -------------------------
+      # OPTIONAL: UPLOAD ARTIFACTS
+      # -------------------------
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: GDMegaOverlayFix
-          path: build/*.geode
+          name: build-${{ matrix.platform }}
+          path: build/
