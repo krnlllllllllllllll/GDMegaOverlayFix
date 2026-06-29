@@ -1,14 +1,16 @@
 #pragma once
 
 #include <Geode/fmod/fmod.hpp>
-#include "../util.hpp"
 
-namespace AudioChannelControl
-{
-	inline float speed = 1.f;
+namespace AudioChannelControl {
+    inline float speed = 1.f;
 
-	FMOD_RESULT setVolumeHook(FMOD::Channel*, float);
+    // Hook for adjusting volume + frequency
+    FMOD_RESULT setVolumeHook(FMOD::Channel* channel, float volume);
 
-	void set(float);
-	void setPitch(float);
+    // Sets playback speed (frequency multiplier)
+    void set(float frequency);
+
+    // Applies pitch shifting DSP
+    void setPitch(float pitch);
 }
