@@ -1,10 +1,10 @@
-include(FetchContent)
+message(STATUS "Compile for Geode 5.7.1? (y/n)")
+file(READ /dev/stdin choice)
+string(TOLOWER "${choice}" choice)
 
-FetchContent_Declare(
-    gdr
-    GIT_REPOSITORY https://github.com/maxnut/GDReplayFormat.git
-    GIT_TAG        4950cc287aaf12d4a92a6bd967aa664d4846d760
-    GIT_PROGRESS TRUE
-)
-message("Fetching gdr")
-FetchContent_MakeAvailable(gdr)
+if(choice MATCHES "^y")
+    message(STATUS "Using Geode SDK 5.7.1")
+    set(GEODE_SDK_VERSION "5.7.1" PARENT_SCOPE)
+else()
+    message(STATUS "Skipping Geode 5.7.1")
+endif()
