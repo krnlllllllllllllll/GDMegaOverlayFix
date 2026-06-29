@@ -1,10 +1,13 @@
+# Subprocess for Geode 5.7.1
+
 include(FetchContent)
 
 FetchContent_Declare(
     subprocess
-    GIT_REPOSITORY https://github.com/SpaghettDev/subprocess.git
-    GIT_TAG        7a641a92eb73e8f39be4d0402efc2c46d5bd1b47
-    GIT_PROGRESS TRUE
+    GIT_REPOSITORY https://github.com/benhoyt/subprocess.git
+    GIT_TAG master
 )
-message("Fetching subprocess")
+
 FetchContent_MakeAvailable(subprocess)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE subprocess)
