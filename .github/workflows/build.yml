@@ -25,6 +25,11 @@ jobs:
           unzip geode.zip -d geode-sdk
           echo "GEODE_SDK=$(pwd)/geode-sdk" >> $GITHUB_ENV
 
+      - name: Install Geode CLI
+        run: |
+          curl -Ls https://geode-sdk.org/install.sh | bash
+          echo "$HOME/.local/share/geode/bin" >> $GITHUB_PATH
+
       - name: Configure CMake
         run: |
           cmake -B build -G Ninja \
@@ -34,8 +39,11 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      - name: Package mod
+        run: geode build
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
-          path: build
+          name: mod
+          path: build/*.geode
