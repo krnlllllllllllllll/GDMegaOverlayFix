@@ -17,13 +17,15 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build g++ gcc unzip curl
+          sudo apt install -y cmake ninja-build g++ gcc unzip curl git
 
-      - name: Install Geode CLI
+      - name: Install Geode CLI (build from source)
         run: |
-          curl -L https://github.com/geode-sdk/geode/releases/latest/download/geode-linux.zip -o geode.zip
-          unzip geode.zip -d geode-cli
-          echo "$(pwd)/geode-cli" >> $GITHUB_PATH
+          git clone https://github.com/geode-sdk/geode.git
+          cd geode
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target geode
+          echo "$(pwd)/build/bin" >> $GITHUB_PATH
 
       - name: Configure CMake
         run: |
