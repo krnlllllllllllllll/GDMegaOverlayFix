@@ -1,42 +1,41 @@
-name: Build Geode Mod
+name: Build
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - "geode"
+    branches: [ geode ]
+  pull_request:
+    branches: [ geode ]
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-        - name: Windows
-          os: windows-latest
-
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Build the mod
-        uses: geode-sdk/build-geode-mod@main
-        with:
-          combine: true
-          target: ${{ matrix.config.target }}
-      
-  package:
-    name: Package builds
     runs-on: ubuntu-latest
-    needs: ['build']
 
     steps:
-      - uses: geode-sdk/build-geode-mod/combine@main
-        id: build
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/upload-artifact@v3
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build g++ gcc
+
+      - name: Install Geode SDK
+        run: |
+          curl -L https://github.com/geode-sdk/geode/releases/download/v5.7.1/geode-sdk-linux.zip -o geode.zip
+          unzip geode.zip -d geode-sdk
+          echo "GEODE_SDK=$(pwd)/geode-sdk" >> $GITHUB_ENV
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DGEODE_SDK=$GEODE_SDK \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: Build Output
-          path: ${{ steps.build.outputs.build-output }}
+          name: GDMegaOverlayFix
+          path: build/bin/*
